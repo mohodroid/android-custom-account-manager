@@ -7,68 +7,53 @@
     android:layout_margin="24dp"
     tools:context=".MainActivity">
 
+
+
     <Button
-        android:id="@+id/google"
+        android:id="@+id/invalidateAuthToken"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:onClick="onClick"
-        android:text="google account"
+        android:text="invalidateAuthToken"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
+        app:layout_constraintTop_toTopOf="parent"/>
 
     <Button
-        android:id="@+id/twitter"
+        android:id="@+id/getAuthTokenByFeature"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:onClick="onClick"
-        android:text="twitter account"
+        android:text="getAuthTokeBbyFeature"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/google" />
-
+        app:layout_constraintTop_toBottomOf="@id/invalidateAuthToken" />
 
     <Button
-        android:id="@+id/all"
+        android:id="@+id/getAuthToken"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:onClick="onClick"
-        android:text="All accounts"
+        android:text="getAuthToke"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/twitter" />
+        app:layout_constraintTop_toBottomOf="@id/getAuthTokenByFeature" />
+
 
     <Button
-        android:id="@+id/custom"
+        android:id="@+id/addAccount"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:onClick="onClick"
-        android:text="custom account"
+        android:text="addAccount"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/all" />
-
-    <ListView
-        android:id="@+id/listViewAccounts"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:background="@color/cardview_dark_background"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/createCustomAccount"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/custom" />
+        app:layout_constraintTop_toBottomOf="@id/getAuthToken" />
 
     <Button
-        android:id="@+id/createCustomAccount"
+        android:id="@+id/getOthersAccounts"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:onClick="onClick"
-        android:text="create custom account"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:text="getOthersAccounts"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/addAccount" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

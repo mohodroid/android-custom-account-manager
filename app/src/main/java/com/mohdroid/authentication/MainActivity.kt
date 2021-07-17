@@ -6,247 +6,278 @@ import android.accounts.AccountManager
 import android.accounts.AccountManagerCallback
 import android.accounts.AccountManagerFuture
 import android.app.Activity
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build.VERSION.SDK_INT
+import android.os.Build
 import android.os.Build.VERSION_CODES.M
 import android.os.Bundle
-import android.os.Handler
-import android.os.Message
+import android.text.TextUtils
 import android.util.Log
-import android.view.View
 import android.widget.ArrayAdapter
-import android.widget.ListView
+import android.widget.ListAdapter
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.mohdroid.authentication.AccountAuthenticator.Companion.ACCOUNT_NAME
-import com.mohdroid.authentication.AccountAuthenticator.Companion.ACCOUNT_TYPE
-import com.mohdroid.authentication.AccountAuthenticator.Companion.USER_ID
+import com.mohdroid.authentication.databinding.ActivityMainBinding
+import com.mohdroid.authenticator.AccountAuthenticator.Companion.ACCOUNT_TYPE
+import com.mohdroid.authenticator.AccountAuthenticator.Companion.AUTHTOKEN_TYPE
+import com.mohdroid.authenticator.AuthenticatorActivity
 import java.util.concurrent.Executors
 
 
 class MainActivity : Activity() {
 
-    private lateinit var lvAccount: ListView
     private lateinit var am: AccountManager
-    private lateinit var accounts: Array<Account>
-
-    private lateinit var requestedAccount: Account
-
+    private lateinit var binding: ActivityMainBinding
 
     companion object {
-        const val PERMISSION_REQUEST_USER_ACCESS_TO_THE_ACCOUNT = 1
+        const val TAG: String = "oAuth"
         const val PERMISSIONS_REQUEST_READ_CONTACTS = 1
-        const val AUTH_TOKEN_TYPE: String = "oauth2:https://www.googleapis.com/auth/tasks.readonly"
-        const val HUMAN_READABLE_AUTH_TOKEN_TYPE: String = "View your tasks"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        lvAccount = findViewById(R.id.listViewAccounts)
-        lvAccount.setOnItemClickListener { parent, view, position, id ->
-            requestedAccount = accounts[position]
-            getAuth(requestedAccount)
-        }
-
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         am = AccountManager.get(this) // "this" references the current Context
-        accessToAccounts()
+        binding.addAccount.setOnClickListener {
+            addNewAccount(ACCOUNT_TYPE, AUTHTOKEN_TYPE)
+        }
+        binding.getAuthTokenByFeature.setOnClickListener {
+            getTokenForAccountCreateIfNeeded(ACCOUNT_TYPE, AUTHTOKEN_TYPE)
+        }
+        binding.invalidateAuthToken.setOnClickListener {
+            showAccountPicker(ACCOUNT_TYPE, true)
+        }
+        binding.getAuthToken.setOnClickListener {
+            showAccountPicker(ACCOUNT_TYPE, false)
+        }
+        binding.getOthersAccounts.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= M) {
+                if (readContactsPermission() != 0) return@setOnClickListener
+            }
+            showAccountPicker(null, false)
+        }
     }
 
-    private fun accessToAccounts() {
-//        if (SDK_INT >= O) {
-//            val intent = AccountManager.newChooseAccountIntent(
-//                null,
-//                null,
-//                arrayOf("com.google"),
-//                null,
-//                null,
-//                null,
-//                null
-//            )
-//            startActivityForResult(intent, 0)
-//        } else if (SDK_INT >= M) {
-//            readContactsPermission()
-//        }
-        if (SDK_INT >= M) {
-            readContactsPermission()
+    /**
+     * Show all the accounts registered on the account manager by this package name.
+     * consider if type of thr account requested created by this package name, no permission required,
+     * otherwise should access read-contact-permission to see accounts created by other apps!
+     * the result will show in the list view below to buttons in the page.
+     * @param accountType type of the account registered in account manager
+     */
+    private fun showAccountPicker(accountType: String?, invalidateAccount: Boolean) {
+        val availableAccounts = am.getAccountsByType(accountType)
+        if (availableAccounts.isEmpty()) {
+            showMessage("No available accounts")
+            return
+        }
+        val names = arrayListOf<String>()
+        availableAccounts.forEach {
+            names.add(it.name)
+        }
+        Log.d(TAG, "showAccountPicker > accountNames: $names")
+        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+        builder.setTitle("Pick account")
+        builder.setAdapter(
+            ArrayAdapter(this, android.R.layout.simple_expandable_list_item_1, names)
+        ) { dialog, which ->
+            if (invalidateAccount)
+                invalidateAuthToken(availableAccounts[which], AUTHTOKEN_TYPE)
+            else
+                getExistingAccountAuthToken(availableAccounts[which], AUTHTOKEN_TYPE)
+        }
+        builder.show()
+    }
+
+    /**
+     * Add new account to the account manager
+     * @param accountType
+     * @param authTokenType
+     */
+    private fun addNewAccount(accountType: String, authTokenType: String) {
+        val accountOptions = Bundle()
+        accountOptions.putString(AuthenticatorActivity.PARAM_BUTTON_NAME, "login")
+        am.addAccount(accountType, authTokenType, null, accountOptions, this, { future ->
+            try {
+                val result = future?.result
+                showMessage("Account was created")
+                Log.d(TAG, "AddNewAccount Bundle is $result")
+            } catch (e: java.lang.Exception) {
+                e.printStackTrace()
+                showMessage(e.message)
+            }
+        }, null)
+    }
+
+    /**
+     * Invalidate the auth token for the account
+     * @param account
+     * @param authTokenType
+     *
+     */
+    private fun invalidateAuthToken(account: Account, authTokenType: String) {
+        val future: AccountManagerFuture<Bundle> =
+            am.getAuthToken(account, authTokenType, null, this, null, null)
+        Executors.newCachedThreadPool().execute {
+            try {
+                val result = future.result
+                val authToken = result.getString(AccountManager.KEY_AUTHTOKEN)
+                am.invalidateAuthToken(account.type, authToken)
+                showMessage("${account.name} invalidated")
+                Log.d(TAG, "invalidateAuthToken success")
+            } catch (e: java.lang.Exception) {
+                e.printStackTrace()
+                showMessage(e.message)
+                Log.d(TAG, "invalidateAuthToken failed")
+            }
+        }
+    }
+
+    /**
+     * Get the auth token for an existing account on the AccountManager
+     * @param account
+     */
+    private fun getExistingAccountAuthToken(account: Account, authTokenType: String) {
+        val authToken: AccountManagerFuture<Bundle> = am.getAuthToken(
+            account, //account retrieved using getAccountsByType()
+            authTokenType, // string that defines the specific type of access your app is asking for auth scope for read-write access to Google Tasks is Manage your tasks.
+            null, // Authenticator-specific options
+            this,// Your activity
+            null,// Callback called when a token is successfully acquired
+            null // Callback called if an error occurs
+        )
+        var token: String?
+        val newCachedThreadPool = Executors.newCachedThreadPool()
+        newCachedThreadPool.execute {
+            try {
+                val result = authToken.result
+                val launch: Intent? = result.get(AccountManager.KEY_INTENT) as? Intent
+                launch?.let {
+                    startActivityForResult(it, 0)
+                    return@execute
+                }
+                token = result.getString(AccountManager.KEY_AUTHTOKEN)
+                showMessage(if (token != null) "SUCCESS!\ntoken: $token" else "FAIL")
+                Log.d(TAG, "GetToken Bundle is $result")
+
+            } catch (e: java.lang.Exception) {
+                e.printStackTrace()
+                showMessage(e.message)
+            }
+        }
+    }
+
+    /**
+     * Get an auth token for the account.
+     * If not exist - add it and then return its auth token.
+     * If one exist - return its auth token.
+     * If more than one exists - show a picker and return the select account's auth token.
+     * @param accountType
+     * @param authTokenType
+     */
+    private fun getTokenForAccountCreateIfNeeded(accountType: String, authTokenType: String) {
+        val future = am.getAuthTokenByFeatures(
+            accountType,
+            authTokenType,
+            null,
+            this,
+            null,
+            null,
+            null,
+            null
+        )
+        Executors.newCachedThreadPool().execute {
+            try {
+                val result = future.result
+                val authToken = result.getString(AccountManager.KEY_AUTHTOKEN)
+                showMessage(if (authToken != null) "SUCCESS!\ntoken: $authToken" else "FAIL")
+                Log.d(
+                    TAG,
+                    "getTokenForAccountCreateIfNeeded > GetTokenForAccount Bundle is  $result"
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                showMessage(e.message)
+            }
+
+        }
+
+    }
+
+    /**
+     * Utility method for show a message with toast
+     * @param message  message content to show
+     */
+    private fun showMessage(message: String?) {
+        if (message == null) return
+        if (TextUtils.isEmpty(message)) return
+        runOnUiThread {
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         }
     }
 
     @RequiresApi(M)
-    private fun readContactsPermission() {
+    private fun readContactsPermission(): Int {
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.READ_CONTACTS
-            ) != PackageManager.PERMISSION_GRANTED
+            ) == PackageManager.PERMISSION_GRANTED
+        ) return 0
+
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
+                Manifest.permission.READ_CONTACTS
+            )
         ) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(
-                    this,
-                    Manifest.permission.READ_CONTACTS
-                )
-            ) {
-                val builder: AlertDialog.Builder = AlertDialog.Builder(this)
-                builder.setTitle("Read accounts permission")
-                builder.setPositiveButton(android.R.string.ok, null)
-                builder.setMessage("Please enable access to accounts.")
-                builder.setOnDismissListener {
-                    requestPermissions(
-                        arrayOf(Manifest.permission.READ_CONTACTS),
-                        PERMISSIONS_REQUEST_READ_CONTACTS
-                    )
-                }
-                builder.show()
-            } else
-                ActivityCompat.requestPermissions(
-                    this,
+            val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+            builder.setTitle("Read accounts permission")
+            builder.setPositiveButton(android.R.string.ok, null)
+            builder.setMessage("Please enable access to accounts.")
+            builder.setOnDismissListener {
+                requestPermissions(
                     arrayOf(Manifest.permission.READ_CONTACTS),
                     PERMISSIONS_REQUEST_READ_CONTACTS
                 )
-
-        }
-    }
-
-
-    private inner class OnTokenAcquired : AccountManagerCallback<Bundle> {
-
-        override fun run(future: AccountManagerFuture<Bundle>) {
-            // Get the result of the operation from the AccountManagerFuture.
-            try {
-                val bundle: Bundle = future.result
-                val launch: Intent? = bundle.get(AccountManager.KEY_INTENT) as? Intent
-                //Perhaps the user's account has expired and they need to log in again, or perhaps their stored credentials are incorrect. Maybe the account requires two-factor authentication or it needs to activate the camera to do a retina scan.
-                launch?.let {
-                    Log.d("AAAA", it.data.toString())
-                    Log.d("AAAA", it.action.toString())
-                    Executors.newSingleThreadExecutor().submit {
-                        startActivityForResult(it, PERMISSION_REQUEST_USER_ACCESS_TO_THE_ACCOUNT)
-                    }
-
-                    return
-                }
-                // The token is a named value in the bundle. The name of the value
-                // is stored in the constant AccountManager.KEY_AUTHTOKEN.
-                val token: String? = bundle.getString(AccountManager.KEY_AUTHTOKEN)
-                Log.d("AAAA", "token: $token")
-            } catch (e: Exception) {
-                Log.d("AAAA", "The user has denied you access to the API, you should handle that")
-                //after future.result this exception thrown if the user denied
             }
-
+            builder.show()
+            return 2
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.READ_CONTACTS),
+                PERMISSIONS_REQUEST_READ_CONTACTS
+            )
+            return 1
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 0 && resultCode == RESULT_OK) {
-            val accountName: String? = data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
-            Log.d("AAAA", "Account Name=$accountName")
-            val accountType: String? = data?.getStringExtra(AccountManager.KEY_ACCOUNT_TYPE)
-            Log.d("AAAA", "Account type=$accountType")
-
-            val accountManager = AccountManager.get(this)
-            val accounts = accountManager.accounts
-            for (a in accounts) {
-                Log.d("AAAA", "type--- " + a.type + " ---- name---- " + a.name)
-            }
-        }
-        if (requestCode == PERMISSION_REQUEST_USER_ACCESS_TO_THE_ACCOUNT && resultCode == RESULT_OK) {
-            getAuth(requestedAccount)
-        }
-    }
-
+    /**
+     * After request to access read-contact-permission if user grant access showAccounts otherwise don't do!
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
         if (requestCode == PERMISSIONS_REQUEST_READ_CONTACTS) {
-            if (grantResults.isNotEmpty() && grantResults[0] === PackageManager.PERMISSION_GRANTED)
-                Log.d("AAAA", "Permission granted")
-            else
-                Log.d("AAAA", "Permission denied")
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "onRequestPermissionsResult > Permission granted")
+                showAccountPicker(null, false)
+            }
+            else Log.d(TAG, "onRequestPermissionsResult > Permission denied")
             return
         }
     }
 
-    private class OnError : Handler.Callback {
-        override fun handleMessage(msg: Message): Boolean {
-            Log.d("AAAA", msg.what.toString())
-            return true
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == 0 && resultCode == RESULT_OK) {
+            showAccountPicker(ACCOUNT_TYPE, false)
         }
-    }
-
-    private fun getAuth(account: Account) {
-        am.getAuthToken(
-            account, //account retrieved using getAccountsByType()
-            HUMAN_READABLE_AUTH_TOKEN_TYPE, // string that defines the specific type of access your app is asking for auth scope for read-write access to Google Tasks is Manage your tasks.
-            Bundle(), // Authenticator-specific options
-            true,// Your activity
-            OnTokenAcquired(),// Callback called when a token is successfully acquired
-            null // Callback called if an error occurs
-        )
-
-    }
-
-    fun onClick(view: View) {
-        when (view.id) {
-            R.id.google -> {
-                accounts = am.getAccountsByType("com.google")
-                showAccountList(accounts)
-            }
-            R.id.twitter -> {
-                accounts = am.getAccountsByType("com.twitter.android.auth.login")
-                showAccountList(accounts)
-            }
-            //com.osp.app.signin -> samsung account
-            R.id.all -> {
-                accounts = am.accounts
-                showAccountList(accounts)
-            }
-            R.id.custom -> {
-                accounts = am.getAccountsByType(ACCOUNT_TYPE)
-                requestedAccount = accounts[0]
-                val token_one: String? = am.peekAuthToken(requestedAccount, AccountAuthenticator.AUTH_TOKEN_TYPE_ONE)
-                token_one?.let {
-                    Log.d("AAAA", it)
-                }
-                val peekAuthToken: String? = am.peekAuthToken(requestedAccount, AccountAuthenticator.AUTH_TOKEN_TYPE_TWO)
-                peekAuthToken?.let {
-                    Log.d("AAAA", it)
-                }
-
-            }
-            R.id.createCustomAccount -> {
-                val account = addOrFindAccount("admin_refresh_token")
-                am.setUserData(account, USER_ID, "user123")
-                am.setAuthToken(account, AccountAuthenticator.AUTH_TOKEN_TYPE_ONE, "admin_access_token_ONE")
-                am.setAuthToken(account, AccountAuthenticator.AUTH_TOKEN_TYPE_TWO, "admin_access_token_TWO")
-            }
-        }
-    }
-
-    private fun addOrFindAccount(pass: String): Account {
-        val accounts = am.getAccountsByType(ACCOUNT_TYPE)
-        val account =
-            if (accounts.isNotEmpty()) accounts[0] else Account(ACCOUNT_NAME, ACCOUNT_TYPE)
-        if (accounts.isEmpty()) {
-            am.addAccountExplicitly(account, pass, null)
-            Log.d("AAAA", "account added!")
-        } else {
-            am.setPassword(accounts[0], pass)
-            Log.d("AAAA", "account pass changed!")
-        }
-        return account
-    }
-
-    private fun showAccountList(accounts: Array<Account>) {
-        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, accounts)
-        lvAccount.adapter = adapter
-
     }
 }

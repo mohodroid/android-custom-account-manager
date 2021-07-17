@@ -7,5 +7,5 @@
 /captures
 .externalNativeBuild
 .cxx
-/KeyStore.jks
+AppKey
 local.properties
