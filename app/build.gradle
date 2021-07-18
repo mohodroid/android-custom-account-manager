@@ -3,12 +3,30 @@ plugins {
     id 'kotlin-android'
 }
 
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+def storePass = properties.getProperty('store_password')
+def keyPass = properties.getProperty('key_password')
+def keyName = properties.getProperty('key_name')
+def location = properties.getProperty('location')
+
 android {
+
+    signingConfigs {
+        release {
+            release {
+                storeFile file(location)
+                storePassword storePass
+                keyAlias keyName
+                keyPassword keyPass
+            }
+        }
+    }
     compileSdkVersion 29
     buildToolsVersion "29.0.3"
 
     defaultConfig {
-        applicationId "com.mohdroid.oauth2"
+        applicationId "com.mohdroid.authentication"
         minSdkVersion 21
         targetSdkVersion 29
         versionCode 1
@@ -20,6 +38,14 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix '.debug'
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+
+        release {
+            debuggable  true
+            applicationIdSuffix '.release'
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

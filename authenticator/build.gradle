@@ -17,7 +17,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField "String", "ACCOUNT_TYPE", '"com.mohdroid.authentication.debug"'
+            debuggable  true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
         release {
+            buildConfigField "String", "ACCOUNT_TYPE", '"com.mohdroid.authentication.release"'
+            debuggable  true
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

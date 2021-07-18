@@ -10,8 +10,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
-import java.util.*
-import java.util.concurrent.Executors
+import com.mohdroid.authenticator.BuildConfig.*
 
 
 class AccountAuthenticator(
@@ -172,7 +171,7 @@ class AccountAuthenticator(
         /**
          * Account type string.
          */
-        const val ACCOUNT_TYPE = "com.mohdroid.authentication"
+        const val ACCOUNT_TYPE = BuildConfig.ACCOUNT_TYPE
 
         /**
          * Authtoken type string.
@@ -182,7 +181,7 @@ class AccountAuthenticator(
         /**
          *  message show when ask user for grant access to account token
          */
-        const val AUTHTOKEN_LABEL = "full access to mohdroid account"
+        const val AUTHTOKEN_LABEL = "full access to account"
 
         /** The tag used to log to adb console. **/
         const val TAG: String = "oAuth"
