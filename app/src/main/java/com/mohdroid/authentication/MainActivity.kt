@@ -3,10 +3,8 @@ package com.mohdroid.authentication
 import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
-import android.accounts.AccountManagerCallback
 import android.accounts.AccountManagerFuture
 import android.app.Activity
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -15,7 +13,6 @@ import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
 import android.widget.ArrayAdapter
-import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
@@ -50,17 +47,29 @@ class MainActivity : Activity() {
             getTokenForAccountCreateIfNeeded(ACCOUNT_TYPE, AUTHTOKEN_TYPE)
         }
         binding.invalidateAuthToken.setOnClickListener {
-            showAccountPicker(ACCOUNT_TYPE, true)
+              showAccountPicker(ACCOUNT_TYPE, true, setVisibleAccount = false)
         }
         binding.getAuthToken.setOnClickListener {
-            showAccountPicker(ACCOUNT_TYPE, false)
+            showAccountPicker(ACCOUNT_TYPE, false, setVisibleAccount = false)
         }
         binding.getOthersAccounts.setOnClickListener {
             if (Build.VERSION.SDK_INT >= M) {
                 if (readContactsPermission() != 0) return@setOnClickListener
             }
-            showAccountPicker(null, false)
+            showAccountPicker(getAnotherBuildTypeAccount(), false, setVisibleAccount = false)
         }
+        binding.setVisibleAccount.setOnClickListener {
+            showAccountPicker(ACCOUNT_TYPE, false, setVisibleAccount = true)
+        }
+    }
+
+    private fun getAnotherBuildTypeAccount() : String {
+        val result =  if (BuildConfig.BUILD_TYPE == "release")
+            "$APPLICATION_PACKAGE_NAME.debug"
+        else
+            "$APPLICATION_PACKAGE_NAME.release"
+        Log.d(TAG, "getAnotherBuildTypeAccount > result: $result")
+        return result
     }
 
     /**
@@ -70,7 +79,11 @@ class MainActivity : Activity() {
      * the result will show in the list view below to buttons in the page.
      * @param accountType type of the account registered in account manager
      */
-    private fun showAccountPicker(accountType: String?, invalidateAccount: Boolean) {
+    private fun showAccountPicker(
+        accountType: String,
+        invalidateAccount: Boolean,
+        setVisibleAccount: Boolean
+    ) {
         val availableAccounts = am.getAccountsByType(accountType)
         if (availableAccounts.isEmpty()) {
             showMessage("No available accounts")
@@ -86,10 +99,14 @@ class MainActivity : Activity() {
         builder.setAdapter(
             ArrayAdapter(this, android.R.layout.simple_expandable_list_item_1, names)
         ) { dialog, which ->
-            if (invalidateAccount)
-                invalidateAuthToken(availableAccounts[which], AUTHTOKEN_TYPE)
-            else
-                getExistingAccountAuthToken(availableAccounts[which], AUTHTOKEN_TYPE)
+            if (setVisibleAccount)
+                setVisibleAccount(availableAccounts[which])
+            else {
+                if (invalidateAccount)
+                    invalidateAuthToken(availableAccounts[which], accountType)
+                else
+                    getExistingAccountAuthToken(availableAccounts[which], accountType)
+            }
         }
         builder.show()
     }
@@ -138,15 +155,29 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun setVisibleAccount(account: Account) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val visibility = am.setAccountVisibility(
+                account,
+                getAnotherBuildTypeAccount(),
+                AccountManager.VISIBILITY_VISIBLE
+            )
+            Log.d(TAG, "setAccountVisibility : $visibility")
+
+        }
+    }
+
     /**
      * Get the auth token for an existing account on the AccountManager
+     * For apps targeting 6.0(API level 23) and higher, the getAuthToken() method doesn't require any
+     * permissions.
      * @param account
      */
     private fun getExistingAccountAuthToken(account: Account, authTokenType: String) {
         val authToken: AccountManagerFuture<Bundle> = am.getAuthToken(
             account, //account retrieved using getAccountsByType()
-            authTokenType, // string that defines the specific type of access your app is asking for auth scope for read-write access to Google Tasks is Manage your tasks.
-            null, // Authenticator-specific options
+            authTokenType, // Auth scope
+            null, // Authenticator-specific options, null means nothing
             this,// Your activity
             null,// Callback called when a token is successfully acquired
             null // Callback called if an error occurs
@@ -268,16 +299,21 @@ class MainActivity : Activity() {
         if (requestCode == PERMISSIONS_REQUEST_READ_CONTACTS) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.d(TAG, "onRequestPermissionsResult > Permission granted")
-                showAccountPicker(null, false)
-            }
-            else Log.d(TAG, "onRequestPermissionsResult > Permission denied")
+                showAccountPicker(getAnotherBuildTypeAccount(), invalidateAccount = false, setVisibleAccount = false)
+            } else Log.d(TAG, "onRequestPermissionsResult > Permission denied")
             return
         }
     }
 
+    /**
+     * Capture the result from the authenticator's response Intent
+     * If don't override the method there is no way to tell whether the user has successfully authenticated or not.
+     * If RESULT_OK means authenticator has update the stored credentials and should call AccountManager.getAuthToken() again.
+     *
+     */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == 0 && resultCode == RESULT_OK) {
-            showAccountPicker(ACCOUNT_TYPE, false)
+            showAccountPicker(ACCOUNT_TYPE, invalidateAccount = false, setVisibleAccount = false)
         }
     }
 }

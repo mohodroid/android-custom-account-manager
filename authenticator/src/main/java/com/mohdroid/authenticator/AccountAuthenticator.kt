@@ -10,8 +10,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
-import com.mohdroid.authenticator.BuildConfig.*
-
 
 class AccountAuthenticator(
     // Authentication Service context
@@ -174,7 +172,9 @@ class AccountAuthenticator(
         const val ACCOUNT_TYPE = BuildConfig.ACCOUNT_TYPE
 
         /**
-         * Authtoken type string.
+         * Authtoken type string. represent the specific type of access your app is asking for.
+         * For instance the auth scope for the read-only access to Google Tasks is View Your tasks
+         * for our example is access-token
          */
         const val AUTHTOKEN_TYPE = ACCOUNT_TYPE
 
