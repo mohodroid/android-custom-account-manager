@@ -47,28 +47,34 @@ class MainActivity : Activity() {
             getTokenForAccountCreateIfNeeded(ACCOUNT_TYPE, AUTHTOKEN_TYPE)
         }
         binding.invalidateAuthToken.setOnClickListener {
-              showAccountPicker(ACCOUNT_TYPE, true, setVisibleAccount = false)
+            showAccountPicker(ACCOUNT_TYPE, true, setVisibleAccount = false)
         }
         binding.getAuthToken.setOnClickListener {
             showAccountPicker(ACCOUNT_TYPE, false, setVisibleAccount = false)
+        }
+        binding.getOtherBuildTypeAccount.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= M) {
+                if (readContactsPermission() != 0) return@setOnClickListener
+            }
+            showAccountPicker(getAnotherBuildTypeAccount(), false, setVisibleAccount = false)
         }
         binding.getOthersAccounts.setOnClickListener {
             if (Build.VERSION.SDK_INT >= M) {
                 if (readContactsPermission() != 0) return@setOnClickListener
             }
-            showAccountPicker(getAnotherBuildTypeAccount(), false, setVisibleAccount = false)
+            showAccountPicker(null, false, setVisibleAccount = false)
         }
         binding.setVisibleAccount.setOnClickListener {
             showAccountPicker(ACCOUNT_TYPE, false, setVisibleAccount = true)
         }
     }
 
-    private fun getAnotherBuildTypeAccount() : String {
-        val result =  if (BuildConfig.BUILD_TYPE == "release")
+    private fun getAnotherBuildTypeAccount(): String {
+        val result = if (BuildConfig.BUILD_TYPE == "release")
             "$APPLICATION_PACKAGE_NAME.debug"
         else
             "$APPLICATION_PACKAGE_NAME.release"
-        Log.d(TAG, "getAnotherBuildTypeAccount > result: $result")
+        Log.d(TAG, "getAnotherBuildTypeAccount > $result")
         return result
     }
 
@@ -80,7 +86,7 @@ class MainActivity : Activity() {
      * @param accountType type of the account registered in account manager
      */
     private fun showAccountPicker(
-        accountType: String,
+        accountType: String?,
         invalidateAccount: Boolean,
         setVisibleAccount: Boolean
     ) {
@@ -90,10 +96,12 @@ class MainActivity : Activity() {
             return
         }
         val names = arrayListOf<String>()
+        val types = arrayListOf<String>()
         availableAccounts.forEach {
             names.add(it.name)
+            types.add(it.type)
         }
-        Log.d(TAG, "showAccountPicker > accountNames: $names")
+        Log.d(TAG, "showAccountPicker > availableAccounts: $types")
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
         builder.setTitle("Pick account")
         builder.setAdapter(
@@ -103,9 +111,12 @@ class MainActivity : Activity() {
                 setVisibleAccount(availableAccounts[which])
             else {
                 if (invalidateAccount)
-                    invalidateAuthToken(availableAccounts[which], accountType)
+                    invalidateAuthToken(availableAccounts[which], availableAccounts[which].type)
                 else
-                    getExistingAccountAuthToken(availableAccounts[which], accountType)
+                    getExistingAccountAuthToken(
+                        availableAccounts[which],
+                        availableAccounts[which].type
+                    )
             }
         }
         builder.show()
@@ -163,7 +174,10 @@ class MainActivity : Activity() {
                 AccountManager.VISIBILITY_VISIBLE
             )
             Log.d(TAG, "setAccountVisibility : $visibility")
-
+            if (visibility)
+                showMessage("setAccountVisibility SUCCESS ")
+            else
+                showMessage("setAccountVisibility FAILED")
         }
     }
 
@@ -299,7 +313,11 @@ class MainActivity : Activity() {
         if (requestCode == PERMISSIONS_REQUEST_READ_CONTACTS) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.d(TAG, "onRequestPermissionsResult > Permission granted")
-                showAccountPicker(getAnotherBuildTypeAccount(), invalidateAccount = false, setVisibleAccount = false)
+                showAccountPicker(
+                    getAnotherBuildTypeAccount(),
+                    invalidateAccount = false,
+                    setVisibleAccount = false
+                )
             } else Log.d(TAG, "onRequestPermissionsResult > Permission denied")
             return
         }
