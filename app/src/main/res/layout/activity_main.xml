@@ -47,13 +47,22 @@
         app:layout_constraintTop_toBottomOf="@id/getAuthToken" />
 
     <Button
-        android:id="@+id/getOtherBuildTypeAccount"
+        android:id="@+id/getOtherBuildTypeToken"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="getOthersBuildTypeAccount"
+        android:text="getOtherBuildTypeToken"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/addAccount" />
+
+    <Button
+        android:id="@+id/invalidateOtherBuildTypeToken"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="invalidateOtherBuildTypeToken"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/getOtherBuildTypeToken" />
 
     <Button
         android:id="@+id/getOthersAccounts"
@@ -62,7 +71,7 @@
         android:text="getOthersAccounts"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/getOtherBuildTypeAccount" />
+        app:layout_constraintTop_toBottomOf="@id/invalidateOtherBuildTypeToken" />
 
 
     <Button

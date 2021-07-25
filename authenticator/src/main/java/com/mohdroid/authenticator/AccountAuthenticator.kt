@@ -7,6 +7,7 @@ import android.accounts.AccountManager
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
@@ -52,11 +53,31 @@ class AccountAuthenticator(
         authTokenType: String?,
         options: Bundle?
     ): Bundle {
-        Log.d(TAG, "getAuthToken()");
+        Log.d(TAG, "getAuthToken( options$options )");
         // If the caller requested an authToken type we don't support, then return an error
         if (authTokenType != AUTHTOKEN_TYPE) {
             val result = Bundle()
             result.putString(AccountManager.KEY_ERROR_MESSAGE, "invalid authTokenType")
+            Log.d(TAG, "getAuthToken() > returned: $result");
+            return result
+        }
+        val callerPackageName = options?.getString("androidPackageName")
+        Log.d(TAG, "getAuthToken() > callerPackageName(): $callerPackageName");
+        if (callerPackageName == null) {
+            val result = Bundle()
+            result.putString(AccountManager.KEY_ERROR_MESSAGE, "empty bundle option")
+            Log.d(TAG, "getAuthToken() > returned: $result");
+            return result
+        }
+        val packageManager = context.packageManager
+        val debugSign =
+            packageManager.checkSignatures("com.mohdroid.authentication.debug", callerPackageName)
+        val releaseSign  = packageManager.checkSignatures("com.mohdroid.authentication.release", callerPackageName)
+        Log.d(TAG, "getAuthToken() > checkSignatures(): $debugSign , $releaseSign");
+        if (debugSign < PackageManager.SIGNATURE_MATCH && releaseSign < PackageManager.SIGNATURE_MATCH) {
+            val result = Bundle()
+            result.putString(AccountManager.KEY_ERROR_MESSAGE, "access denied")
+            Log.d(TAG, "getAuthToken() > returned: $result");
             return result
         }
         // Extract the username and password from the Account Manager, and ask

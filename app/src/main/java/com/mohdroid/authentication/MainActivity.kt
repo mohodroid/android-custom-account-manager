@@ -52,11 +52,17 @@ class MainActivity : Activity() {
         binding.getAuthToken.setOnClickListener {
             showAccountPicker(ACCOUNT_TYPE, false, setVisibleAccount = false)
         }
-        binding.getOtherBuildTypeAccount.setOnClickListener {
+        binding.getOtherBuildTypeToken.setOnClickListener {
             if (Build.VERSION.SDK_INT >= M) {
                 if (readContactsPermission() != 0) return@setOnClickListener
             }
             showAccountPicker(getAnotherBuildTypeAccount(), false, setVisibleAccount = false)
+        }
+        binding.invalidateOtherBuildTypeToken.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= M) {
+                if (readContactsPermission() != 0) return@setOnClickListener
+            }
+            showAccountPicker(getAnotherBuildTypeAccount(), true, setVisibleAccount = false)
         }
         binding.getOthersAccounts.setOnClickListener {
             if (Build.VERSION.SDK_INT >= M) {
@@ -201,15 +207,19 @@ class MainActivity : Activity() {
         newCachedThreadPool.execute {
             try {
                 val result = authToken.result
+                Log.d(TAG, "GetToken Bundle is $result")
                 val launch: Intent? = result.get(AccountManager.KEY_INTENT) as? Intent
                 launch?.let {
                     startActivityForResult(it, 0)
                     return@execute
                 }
                 token = result.getString(AccountManager.KEY_AUTHTOKEN)
-                showMessage(if (token != null) "SUCCESS!\ntoken: $token" else "FAIL")
-                Log.d(TAG, "GetToken Bundle is $result")
-
+                token?.let {
+                    showMessage("SUCCESS!\ntoken: $token")
+                    return@execute
+                }
+                val errorMessage = result.getString(AccountManager.KEY_ERROR_MESSAGE)
+                showMessage("FAILED!\n errorMessage: $errorMessage")
             } catch (e: java.lang.Exception) {
                 e.printStackTrace()
                 showMessage(e.message)
