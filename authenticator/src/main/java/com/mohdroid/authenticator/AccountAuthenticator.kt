@@ -104,7 +104,7 @@ class AccountAuthenticator(
 
             // this is mock for getAccessToken from server
             // If we get an authToken - we return it
-            val future = refresh(password)
+            val future = MockAuthenticate.refresh(password)
             while (!future.isDone) {
                 Log.d(TAG, "getAuthToken() > trying to refresh current access token ...")
                 Thread.sleep(300)
@@ -132,6 +132,7 @@ class AccountAuthenticator(
         intent.putExtra(AuthenticatorActivity.PARAM_ACCOUNT_TYPE, account?.type)
         intent.putExtra(AuthenticatorActivity.PARAM_ACCOUNT_NAME, account?.name)
         intent.putExtra(AuthenticatorActivity.PARAM_AUTHTOKEN_TYPE, authTokenType)
+        intent.putExtra(AuthenticatorActivity.PARAM_IS_ADDING_NEW_ACCOUNT, false)
         val result = Bundle()
         result.putParcelable(AccountManager.KEY_INTENT, intent)
         return result

@@ -15,41 +15,47 @@ data class RegisterResponse(
     val refreshToken: String
 )
 
-object InMemoryCache {
-    var mobileNumber: String = ""
+object MockAuthenticate {
+    /**
+     * Safe to call from main thread, this api is thread safe
+     */
+    var mobileNumber: String? = null
+    var numberOfRegistered: Int = 0
+    fun register(registerRequest: RegisterRequest): Future<RegisterResponse> {
+        Log.d("oAuth", "register($registerRequest)")
+        mobileNumber = registerRequest.mobileNumber
+        numberOfRegistered++
+        val executor = Executors.newCachedThreadPool()
+        return executor.submit(Callable {
+            Thread.sleep(1000)
+            val accessToken = "access token - $mobileNumber - $numberOfRegistered"
+            val refreshToken = "refresh token - $mobileNumber - $numberOfRegistered"
+            val registerResponse = RegisterResponse(accessToken, refreshToken)
+            Log.d("oAuth", "MockAuthenticator > register > RegisterResponse: $registerResponse ")
+            registerResponse
+        })
+    }
+
+    /**
+     * Safe to call from main thread, this api is thread safe
+     *
+     */
+    fun refresh(refreshToken: String): Future<RegisterResponse> {
+        Log.d("oAuth", "refresh($refreshToken)")
+        val executor = Executors.newCachedThreadPool()
+        return executor.submit(Callable {
+            Thread.sleep(1000)
+            val registerResponse = if (Random().nextBoolean()) {
+                RegisterResponse("", "")
+            } else {
+                val accessToken = "access token - $mobileNumber - $numberOfRegistered"
+                val newRefreshToken = "refresh token - $mobileNumber - $numberOfRegistered"
+                RegisterResponse(accessToken, newRefreshToken)
+            }
+            Log.d("oAuth", "MockAuthenticator > register > RegisterResponse: $registerResponse ")
+            registerResponse
+        })
+    }
 }
 
-/**
- * Safe to call from main thread, this api is thread safe
- */
-fun register(registerRequest: RegisterRequest): Future<RegisterResponse> {
-    Log.d("oAuth", "register($registerRequest)")
-    val executor = Executors.newCachedThreadPool()
-    return executor.submit(Callable {
-        Thread.sleep(1000)
-        val accessToken = "access token " + registerRequest.mobileNumber +
-                Random().nextInt(100)
-        val refreshToken = "refresh token " + registerRequest.mobileNumber +
-                Random().nextInt(100)
-        InMemoryCache.mobileNumber = registerRequest.mobileNumber
-        RegisterResponse(accessToken, refreshToken)
-    })
-}
-
-/**
- * Safe to call from main thread, this api is thread safe
- */
-fun refresh(refreshToken: String): Future<RegisterResponse> {
-    Log.d("oAuth", "refresh($refreshToken)")
-    val executor = Executors.newCachedThreadPool()
-    return executor.submit(Callable {
-        Thread.sleep(1000)
-        val accessToken = "access token " + InMemoryCache.mobileNumber +
-                Random().nextInt(100)
-        val newRefreshToken = "refresh token " + InMemoryCache.mobileNumber +
-                Random().nextInt(100) + "lastRefresh $refreshToken"
-        Log.d("oAuth", "MockAuthenticator > refreshToken: $newRefreshToken")
-        RegisterResponse(accessToken, newRefreshToken)
-    })
-}
 
