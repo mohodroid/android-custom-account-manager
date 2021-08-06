@@ -72,29 +72,10 @@ class AccountAuthenticator(
             Log.d(TAG, "getAuthToken() > returned: $result");
             return result
         }
-        // Extract the username and password from the Account Manager, and ask
-        // the server for an appropriate AuthToken
         val accountManager = AccountManager.get(context)
-
-        //can’t peekAuthToken() to other Authenticators
-        val authToken = accountManager.peekAuthToken(account, authTokenType)
-        Log.d(TAG, "getAuthToken > peekAuthToken returned - $authToken")
-
-        // If we get an authToken - we return it
-        if (!TextUtils.isEmpty(authToken)) {
-            val result = Bundle()
-            result.putString(AccountManager.KEY_ACCOUNT_NAME, account?.name)
-            result.putString(AccountManager.KEY_ACCOUNT_TYPE, account?.type)
-            result.putString(AccountManager.KEY_AUTHTOKEN, authToken)
-            return result
-        }
-        // We consider password as refreshToken
-        // Lets give another try to authenticate the user
-        // This is where we refresh the access-token
         val password = accountManager.getPassword(account)
         if (password != null) {
             // this is mock for getAccessToken from server
-            // If we get an authToken - we return it
             val future = MockAuthenticate.refresh(password)
             while (!future.isDone) {
                 Log.d(TAG, "getAuthToken() > trying to refresh current access token ...")
