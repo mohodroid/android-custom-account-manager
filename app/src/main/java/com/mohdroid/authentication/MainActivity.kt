@@ -107,7 +107,7 @@ class MainActivity : Activity() {
             names.add(it.name)
             types.add(it.type)
         }
-        Log.d(TAG, "showAccountPicker > availableAccounts: $types")
+        Log.d(TAG, "MainActivity > showAccountPicker > availableAccounts: $types")
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
         builder.setTitle("Pick account")
         builder.setAdapter(
@@ -119,7 +119,7 @@ class MainActivity : Activity() {
                 if (invalidateAccount)
                     invalidateAuthToken(availableAccounts[which], availableAccounts[which].type)
                 else
-                    getExistingAccountAuthToken(
+                    getAccountAuthToken(
                         availableAccounts[which],
                         availableAccounts[which].type
                     )
@@ -135,12 +135,13 @@ class MainActivity : Activity() {
      */
     private fun addNewAccount(accountType: String, authTokenType: String) {
         val accountOptions = Bundle()
-        accountOptions.putString(AuthenticatorActivity.PARAM_BUTTON_NAME, "login")
+        accountOptions.putString(AuthenticatorActivity.PARAM_BUTTON_COLOR, "silver")
+        accountOptions.putString(AuthenticatorActivity.PARAM_BACKGROUND_COLOR, "grey")
         am.addAccount(accountType, authTokenType, null, accountOptions, this, { future ->
             try {
                 val result = future?.result
                 showMessage("Account was created")
-                Log.d(TAG, "AddNewAccount Bundle is $result")
+                Log.d(TAG, "MainActivity > AddNewAccount result is $result")
             } catch (e: java.lang.Exception) {
                 e.printStackTrace()
                 showMessage(e.message)
@@ -163,7 +164,7 @@ class MainActivity : Activity() {
                 val authToken = result.getString(AccountManager.KEY_AUTHTOKEN)
                 am.invalidateAuthToken(account.type, authToken)
                 showMessage("${account.name} invalidated")
-                Log.d(TAG, "invalidateAuthToken success")
+                Log.d(TAG, "MainActivity > invalidateAuthToken result is success")
             } catch (e: java.lang.Exception) {
                 e.printStackTrace()
                 showMessage(e.message)
@@ -193,7 +194,7 @@ class MainActivity : Activity() {
      * permissions.
      * @param account
      */
-    private fun getExistingAccountAuthToken(account: Account, authTokenType: String) {
+    private fun getAccountAuthToken(account: Account, authTokenType: String) {
         val authToken: AccountManagerFuture<Bundle> = am.getAuthToken(
             account, //account retrieved using getAccountsByType()
             authTokenType, // Auth scope
@@ -202,18 +203,17 @@ class MainActivity : Activity() {
             null,// Callback called when a token is successfully acquired
             null // Callback called if an error occurs
         )
-        var token: String?
         val newCachedThreadPool = Executors.newCachedThreadPool()
         newCachedThreadPool.execute {
             try {
-                val result = authToken.result
-                Log.d(TAG, "GetToken Bundle is $result")
+                val result: Bundle = authToken.result
+                Log.d(TAG, "MainActivity > getAccountAuthToken > result is $result")
                 val launch: Intent? = result.get(AccountManager.KEY_INTENT) as? Intent
                 launch?.let {
                     startActivityForResult(it, 0)
                     return@execute
                 }
-                token = result.getString(AccountManager.KEY_AUTHTOKEN)
+                val token = result.getString(AccountManager.KEY_AUTHTOKEN)
                 token?.let {
                     showMessage("SUCCESS!\ntoken: $token")
                     return@execute
@@ -251,15 +251,11 @@ class MainActivity : Activity() {
                 val result = future.result
                 val authToken = result.getString(AccountManager.KEY_AUTHTOKEN)
                 showMessage(if (authToken != null) "SUCCESS!\ntoken: $authToken" else "FAIL")
-                Log.d(
-                    TAG,
-                    "getTokenForAccountCreateIfNeeded > GetTokenForAccount Bundle is  $result"
-                )
+                Log.d(TAG, "MainActivity > getTokenForAccountCreateIfNeeded > result is $result")
             } catch (e: Exception) {
                 e.printStackTrace()
                 showMessage(e.message)
             }
-
         }
 
     }

@@ -32,15 +32,7 @@ class AccountAuthenticator(
         options: Bundle?
     ): Bundle {
         Log.d(TAG, "addAccount()");
-        val intent = Intent(context, AuthenticatorActivity::class.java)
-        intent.putExtra(AuthenticatorActivity.PARAM_ACCOUNT_TYPE, accountType)
-        intent.putExtra(AuthenticatorActivity.PARAM_AUTHTOKEN_TYPE, authTokenType)
-        intent.putExtra(AuthenticatorActivity.PARAM_IS_ADDING_NEW_ACCOUNT, true)
-        intent.putExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response)
-        intent.putExtra(AuthenticatorActivity.PARAM_BUNDLE_OPTIONS, options)
-        val result = Bundle()
-        result.putParcelable(AccountManager.KEY_INTENT, intent)
-        return result
+        return showAuthActivity(true, accountType, authTokenType, response, options)
     }
 
     /**
@@ -101,10 +93,9 @@ class AccountAuthenticator(
         // This is where we refresh the access-token
         val password = accountManager.getPassword(account)
         if (password != null) {
-
             // this is mock for getAccessToken from server
             // If we get an authToken - we return it
-            val future = refresh(password)
+            val future = MockAuthenticate.refresh(password)
             while (!future.isDone) {
                 Log.d(TAG, "getAuthToken() > trying to refresh current access token ...")
                 Thread.sleep(300)
@@ -127,11 +118,17 @@ class AccountAuthenticator(
         // If we get here, then we couldn't access the user's password - so we
         // need to re-prompt them for their credentials. We do that by creating
         // an intent to display our AuthenticatorActivity.
+        return showAuthActivity(false, account?.type, authTokenType, response, options)
+
+    }
+
+    private fun showAuthActivity(isNewAccount: Boolean, accountType: String?, authTokenType: String?, response: AccountAuthenticatorResponse?, options: Bundle?): Bundle {
         val intent = Intent(context, AuthenticatorActivity::class.java)
         intent.putExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response)
-        intent.putExtra(AuthenticatorActivity.PARAM_ACCOUNT_TYPE, account?.type)
-        intent.putExtra(AuthenticatorActivity.PARAM_ACCOUNT_NAME, account?.name)
+        intent.putExtra(AuthenticatorActivity.PARAM_ACCOUNT_TYPE, accountType)
         intent.putExtra(AuthenticatorActivity.PARAM_AUTHTOKEN_TYPE, authTokenType)
+        intent.putExtra(AuthenticatorActivity.PARAM_IS_ADDING_NEW_ACCOUNT, isNewAccount)
+        intent.putExtra(AuthenticatorActivity.PARAM_BUNDLE_OPTIONS, options)
         val result = Bundle()
         result.putParcelable(AccountManager.KEY_INTENT, intent)
         return result

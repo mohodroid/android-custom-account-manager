@@ -4,22 +4,21 @@ import android.accounts.Account
 import android.accounts.AccountAuthenticatorActivity
 import android.accounts.AccountManager
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.AsyncTask
 import android.os.Bundle
 import android.util.Log
 import com.mohdroid.authenticator.AccountAuthenticator.Companion.AUTHTOKEN_TYPE
 import com.mohdroid.authenticator.databinding.ActivityAuthenticatorBinding
-import java.util.*
 
 
 class AuthenticatorActivity : AccountAuthenticatorActivity() {
 
     companion object {
         const val PARAM_BUNDLE_OPTIONS: String = "BUNDLE_OPTIONS"
-        const val PARAM_BUTTON_NAME: String = "BUTTON_NAME"
+        const val PARAM_BUTTON_COLOR: String = "BUTTON_COLOR"
+        const val PARAM_BACKGROUND_COLOR: String = "BACKGROUND_COLOR"
 
         /** The tag used to log to adb console. */
         const val TAG: String = "oAuth"
@@ -42,9 +41,11 @@ class AuthenticatorActivity : AccountAuthenticatorActivity() {
         authTokenType = intent.getStringExtra(PARAM_AUTHTOKEN_TYPE)
         val bundle: Bundle? = intent.getBundleExtra(PARAM_BUNDLE_OPTIONS)
         bundle?.let {
-            val buttonName = it.getString(PARAM_BUTTON_NAME)
-            buttonName?.let { name ->
-                binding.btnSubmit.text = name
+            it.getString(PARAM_BUTTON_COLOR)?.let { color ->
+                binding.btnSubmit.setBackgroundColor(Color.parseColor(color))
+            }
+            it.getString(PARAM_BACKGROUND_COLOR)?.let { color ->
+                binding.root.setBackgroundColor(Color.parseColor(color))
             }
         }
         binding.btnSubmit.setOnClickListener {
@@ -59,16 +60,13 @@ class AuthenticatorActivity : AccountAuthenticatorActivity() {
      */
     inner class Task(private val mobileNumber: String) : AsyncTask<Void?, Void?, Intent?>() {
         override fun doInBackground(vararg params: Void?): Intent {
-            val future = register(RegisterRequest(mobileNumber))
+            val future = MockAuthenticate.register(RegisterRequest(mobileNumber))
             val authToken = future.get().accessToken
             val refreshToken = future.get().refreshToken
             val data = Bundle()
             val res = Intent()
             data.putString(AccountManager.KEY_ACCOUNT_NAME, mobileNumber)
-            data.putString(
-                AccountManager.KEY_ACCOUNT_TYPE,
-                intent.getStringExtra(PARAM_ACCOUNT_TYPE)
-            )
+            data.putString(AccountManager.KEY_ACCOUNT_TYPE, intent.getStringExtra(PARAM_ACCOUNT_TYPE))
             data.putString(AccountManager.KEY_AUTHTOKEN, authToken)
             data.putString(PARAM_PASS, refreshToken)
             res.putExtras(data)
