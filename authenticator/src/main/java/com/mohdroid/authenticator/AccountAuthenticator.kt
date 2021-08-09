@@ -24,6 +24,7 @@ class AccountAuthenticator(
      * yet, otherwise our activity will just pass the user's credentials on to
      * the account manager.
      */
+    @SuppressLint("MissingPermission")
     override fun addAccount(
         response: AccountAuthenticatorResponse?,
         accountType: String?,
@@ -32,20 +33,53 @@ class AccountAuthenticator(
         options: Bundle?
     ): Bundle {
         Log.d(TAG, "addAccount()");
+        val am = AccountManager.get(context)
+        val accountsByType = am.getAccountsByType(ACCOUNT_TYPE)
+        if (accountsByType.isNotEmpty()) {
+            //if account is already exist , consider it as an error.
+            val result = Bundle()
+            result.putString(AccountManager.KEY_ERROR_CODE, "403")
+            result.putString(
+                AccountManager.KEY_ERROR_MESSAGE,
+                context.getString(R.string.error_account_exists)
+            )
+            return result
+        }
+
+
         return showAuthActivity(true, accountType, authTokenType, response, options)
     }
 
+    @SuppressLint("MissingPermission")
+    private fun accountExist(account: Account): Boolean {
+        val am = AccountManager.get(context)
+        val accounts = am.getAccountsByType(ACCOUNT_TYPE)
+        for (ac in accounts) {
+            if (ac == account) {
+                return true
+            }
+        }
+        return false
+    }
     /**
      * THIS method calls when user wants to get token from accountManager
      */
     @SuppressLint("MissingPermission")
     override fun getAuthToken(
         response: AccountAuthenticatorResponse?,
-        account: Account?,
+        account: Account,
         authTokenType: String?,
         options: Bundle?
     ): Bundle {
         Log.d(TAG, "getAuthToken( options$options )");
+        // When the specified account doesn't exist, consider it as an error.
+        if (!accountExist(account)) {
+            val result = Bundle()
+            result.putString(AccountManager.KEY_ERROR_CODE, "403");
+            result.putString(AccountManager.KEY_ERROR_MESSAGE,
+                context.getString(R.string.error_account_not_exists));
+        }
+
         // If the caller requested an authToken type we don't support, then return an error
         if (authTokenType != AUTHTOKEN_TYPE) {
             val result = Bundle()
@@ -64,7 +98,8 @@ class AccountAuthenticator(
         val packageManager = context.packageManager
         val debugSign =
             packageManager.checkSignatures("com.mohdroid.authentication.debug", callerPackageName)
-        val releaseSign  = packageManager.checkSignatures("com.mohdroid.authentication.release", callerPackageName)
+        val releaseSign =
+            packageManager.checkSignatures("com.mohdroid.authentication.release", callerPackageName)
         Log.d(TAG, "getAuthToken() > checkSignatures(): $debugSign , $releaseSign");
         if (debugSign < PackageManager.SIGNATURE_MATCH && releaseSign < PackageManager.SIGNATURE_MATCH) {
             val result = Bundle()
@@ -103,7 +138,13 @@ class AccountAuthenticator(
 
     }
 
-    private fun showAuthActivity(isNewAccount: Boolean, accountType: String?, authTokenType: String?, response: AccountAuthenticatorResponse?, options: Bundle?): Bundle {
+    private fun showAuthActivity(
+        isNewAccount: Boolean,
+        accountType: String?,
+        authTokenType: String?,
+        response: AccountAuthenticatorResponse?,
+        options: Bundle?
+    ): Bundle {
         val intent = Intent(context, AuthenticatorActivity::class.java)
         intent.putExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response)
         intent.putExtra(AuthenticatorActivity.PARAM_ACCOUNT_TYPE, accountType)
