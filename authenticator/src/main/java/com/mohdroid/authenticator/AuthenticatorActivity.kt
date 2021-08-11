@@ -85,7 +85,6 @@ class AuthenticatorActivity : AccountAuthenticatorActivity() {
         val accountName = intent!!.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
         val accountType = intent.getStringExtra(AccountManager.KEY_ACCOUNT_TYPE)
         val refreshToken = intent.getStringExtra(PARAM_PASS)
-        //username, your_account_type
         val account = Account(accountName, accountType)
         if (getIntent().getBooleanExtra(PARAM_IS_ADDING_NEW_ACCOUNT, false)) {
             //You add a new account to the device - that’s a tricky part. When creating an account, the auth-token is NOT saved immediately to the AccountManager, it needs to be saved explicitly. That’s why I’m setting the auth-token explicitly after adding the new account to the AccountManager. Failing to do so, makes the AccountManager do another trip to the server, when the getAuthToken method is called, and authenticating the user again.

@@ -122,8 +122,8 @@ class AccountAuthenticator(
             //we should update access and refresh token
             if (!TextUtils.isEmpty(accessToken)) {
                 val result = Bundle()
-                result.putString(AccountManager.KEY_ACCOUNT_NAME, account?.name)
-                result.putString(AccountManager.KEY_ACCOUNT_TYPE, account?.type)
+                result.putString(AccountManager.KEY_ACCOUNT_NAME, account.name)
+                result.putString(AccountManager.KEY_ACCOUNT_TYPE, account.type)
                 result.putString(AccountManager.KEY_AUTHTOKEN, accessToken)
                 accountManager.clearPassword(account)
                 accountManager.setPassword(account, refreshToken)
@@ -134,7 +134,7 @@ class AccountAuthenticator(
         // If we get here, then we couldn't access the user's password - so we
         // need to re-prompt them for their credentials. We do that by creating
         // an intent to display our AuthenticatorActivity.
-        return showAuthActivity(false, account?.type, authTokenType, response, options)
+        return showAuthActivity(false, account.type, authTokenType, response, options)
 
     }
 

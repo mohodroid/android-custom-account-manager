@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mohdroid.authentication">
 
+    <queries>
+        <package android:name="com.mohdroid.authentication.debug" />
+    </queries>
     <uses-permission
         android:name="android.permission.MANAGE_ACCOUNTS"
         android:maxSdkVersion="22" />

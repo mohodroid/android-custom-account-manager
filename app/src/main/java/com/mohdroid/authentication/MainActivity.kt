@@ -3,13 +3,15 @@ package com.mohdroid.authentication
 import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
+import android.accounts.AccountManagerCallback
 import android.accounts.AccountManagerFuture
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
+import android.os.*
 import android.os.Build.VERSION_CODES.M
-import android.os.Bundle
+import android.os.Build.VERSION_CODES.O
+import android.provider.Telephony
 import android.text.TextUtils
 import android.util.Log
 import android.widget.ArrayAdapter
@@ -40,6 +42,7 @@ class MainActivity : Activity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         am = AccountManager.get(this) // "this" references the current Context
+        binding.tvPackageName.text = BuildConfig.APPLICATION_ID
         binding.addAccount.setOnClickListener {
             addNewAccount(ACCOUNT_TYPE, AUTHTOKEN_TYPE)
         }
@@ -54,9 +57,28 @@ class MainActivity : Activity() {
         }
         binding.getOtherBuildTypeToken.setOnClickListener {
             if (Build.VERSION.SDK_INT >= M) {
-                if (readContactsPermission() != 0) return@setOnClickListener
+                if (Build.VERSION.SDK_INT < O) {
+                    if (readContactsPermission() != 0) return@setOnClickListener
+                    else {
+                        showAccountPicker(
+                            getAnotherBuildTypeAccount(),
+                            false,
+                            setVisibleAccount = false
+                        )
+                    }
+                } else {
+                    val newChooseAccountIntent = AccountManager.newChooseAccountIntent(
+                        null, null,
+                        arrayOf(getAnotherBuildTypeAccount()),
+                        null,
+                        null, null, null
+                    )
+                    newChooseAccountIntent.putExtra("account_type", getAnotherBuildTypeAccount())
+                    startActivityForResult(newChooseAccountIntent, 3)
+                }
+            } else {
+                showAccountPicker(getAnotherBuildTypeAccount(), false, setVisibleAccount = false)
             }
-            showAccountPicker(getAnotherBuildTypeAccount(), false, setVisibleAccount = false)
         }
         binding.invalidateOtherBuildTypeToken.setOnClickListener {
             if (Build.VERSION.SDK_INT >= M) {
@@ -174,15 +196,31 @@ class MainActivity : Activity() {
     }
 
     private fun setVisibleAccount(account: Account) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= O) {
             val visibility = am.setAccountVisibility(
                 account,
                 getAnotherBuildTypeAccount(),
-                AccountManager.VISIBILITY_VISIBLE
+                AccountManager.VISIBILITY_USER_MANAGED_VISIBLE
             )
             Log.d(TAG, "setAccountVisibility : $visibility")
             if (visibility)
-                showMessage("setAccountVisibility SUCCESS ")
+                showMessage("setAccountVisibility SUCCESS to ${getAnotherBuildTypeAccount()}")
+            else
+                showMessage("setAccountVisibility FAILED  to ${getAnotherBuildTypeAccount()}")
+        }
+
+    }
+
+    private fun setAccountVisibleToAll(account: Account) {
+        if (Build.VERSION.SDK_INT >= O) {
+            val accountVisibility = am.setAccountVisibility(
+                account,
+                AccountManager.PACKAGE_NAME_KEY_LEGACY_NOT_VISIBLE,
+                AccountManager.VISIBILITY_USER_MANAGED_VISIBLE
+            );
+            Log.d(TAG, "setAccountVisibility : $accountVisibility")
+            if (accountVisibility)
+                showMessage("setAccountVisibility SUCCESS")
             else
                 showMessage("setAccountVisibility FAILED")
         }
@@ -228,6 +266,21 @@ class MainActivity : Activity() {
     }
 
     /**
+     * Get the auth token for an existing account on the AccountManager
+     * For apps targeting 6.0(API level 23) and higher, the getAuthToken() method doesn't require any
+     * permissions.
+     * @param account
+     */
+
+    private fun getAuthTokenWithCallback(account: Account, authTokenType: String) {
+        Executors.newCachedThreadPool().execute {
+            Log.d(TAG, "MainActivity > getAuthTokenWithCallback > currentThread: ${Thread.currentThread().name}")
+            am.getAuthToken(account, authTokenType, null, this, OnTokenAcquired(), null)
+        }
+
+    }
+
+    /**
      * Get an auth token for the account.
      * If not exist - add it and then return its auth token.
      * If one exist - return its auth token.
@@ -257,7 +310,6 @@ class MainActivity : Activity() {
                 showMessage(e.message)
             }
         }
-
     }
 
     /**
@@ -267,11 +319,8 @@ class MainActivity : Activity() {
     private fun showMessage(message: String?) {
         if (message == null) return
         if (TextUtils.isEmpty(message)) return
-        runOnUiThread {
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-        }
     }
-
     @RequiresApi(M)
     private fun readContactsPermission(): Int {
         if (ContextCompat.checkSelfPermission(
@@ -338,6 +387,38 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == 0 && resultCode == RESULT_OK) {
             showAccountPicker(ACCOUNT_TYPE, invalidateAccount = false, setVisibleAccount = false)
+        }
+        if (requestCode == 3 && resultCode == RESULT_OK) {
+            Log.d("oAuth", "onActivityResult > intent: ${intent}")
+            val accountType = intent.getStringExtra("account_type")
+            showAccountPicker(accountType, invalidateAccount = false, setVisibleAccount = false)
+        }
+    }
+
+    private inner class OnTokenAcquired : AccountManagerCallback<Bundle> {
+
+        override fun run(result: AccountManagerFuture<Bundle>) {
+            try {
+                val currentThread = Thread.currentThread().name
+                Log.d(TAG, "OnTokenAcquired > currentThread: $currentThread")
+                val bundle = result.result
+                Log.d(TAG, "OnTokenAcquired > getAccountAuthToken > result is $result")
+                val launch: Intent? = bundle.get(AccountManager.KEY_INTENT) as? Intent
+                launch?.let {
+                    startActivityForResult(it, 0)
+                    return
+                }
+                val token = bundle.getString(AccountManager.KEY_AUTHTOKEN)
+                token?.let {
+                    showMessage("SUCCESS!\ntoken: $token")
+                    return
+                }
+                val errorMessage = bundle.getString(AccountManager.KEY_ERROR_MESSAGE)
+                showMessage("FAILED!\n errorMessage: $errorMessage")
+            } catch (e: java.lang.Exception) {
+                e.printStackTrace()
+                showMessage(e.message)
+            }
         }
     }
 }
