@@ -274,7 +274,10 @@ class MainActivity : Activity() {
 
     private fun getAuthTokenWithCallback(account: Account, authTokenType: String) {
         Executors.newCachedThreadPool().execute {
-            Log.d(TAG, "MainActivity > getAuthTokenWithCallback > currentThread: ${Thread.currentThread().name}")
+            Log.d(
+                TAG,
+                "MainActivity > getAuthTokenWithCallback > currentThread: ${Thread.currentThread().name}"
+            )
             am.getAuthToken(account, authTokenType, null, this, OnTokenAcquired(), null)
         }
 
@@ -319,8 +322,11 @@ class MainActivity : Activity() {
     private fun showMessage(message: String?) {
         if (message == null) return
         if (TextUtils.isEmpty(message)) return
+        runOnUiThread {
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        }
     }
+
     @RequiresApi(M)
     private fun readContactsPermission(): Int {
         if (ContextCompat.checkSelfPermission(
