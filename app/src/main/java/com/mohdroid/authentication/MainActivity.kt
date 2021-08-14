@@ -55,6 +55,9 @@ class MainActivity : Activity() {
         binding.getAuthToken.setOnClickListener {
             showAccountPicker(ACCOUNT_TYPE, false, setVisibleAccount = false)
         }
+        binding.getAuthTokenWithCallback.setOnClickListener {
+            showAccountPicker(ACCOUNT_TYPE, false, setVisibleAccount = false, useCallback = true)
+        }
         binding.getOtherBuildTypeToken.setOnClickListener {
             if (Build.VERSION.SDK_INT >= M) {
                 if (Build.VERSION.SDK_INT < O) {
@@ -80,12 +83,7 @@ class MainActivity : Activity() {
                 showAccountPicker(getAnotherBuildTypeAccount(), false, setVisibleAccount = false)
             }
         }
-        binding.invalidateOtherBuildTypeToken.setOnClickListener {
-            if (Build.VERSION.SDK_INT >= M) {
-                if (readContactsPermission() != 0) return@setOnClickListener
-            }
-            showAccountPicker(getAnotherBuildTypeAccount(), true, setVisibleAccount = false)
-        }
+
         binding.getOthersAccounts.setOnClickListener {
             if (Build.VERSION.SDK_INT >= M) {
                 if (readContactsPermission() != 0) return@setOnClickListener
@@ -116,7 +114,8 @@ class MainActivity : Activity() {
     private fun showAccountPicker(
         accountType: String?,
         invalidateAccount: Boolean,
-        setVisibleAccount: Boolean
+        setVisibleAccount: Boolean,
+        useCallback: Boolean = false
     ) {
         val availableAccounts = am.getAccountsByType(accountType)
         if (availableAccounts.isEmpty()) {
@@ -141,7 +140,8 @@ class MainActivity : Activity() {
                 if (invalidateAccount)
                     invalidateAuthToken(availableAccounts[which], availableAccounts[which].type)
                 else
-                    getAccountAuthToken(
+                    getAuthToken(
+                        useCallback,
                         availableAccounts[which],
                         availableAccounts[which].type
                     )
@@ -263,6 +263,12 @@ class MainActivity : Activity() {
                 showMessage(e.message)
             }
         }
+    }
+
+    private fun getAuthToken(useCallback: Boolean, account: Account, authTokenType: String) {
+        if (useCallback) getAuthTokenWithCallback(account, authTokenType)
+        else
+            getAccountAuthToken(account, authTokenType)
     }
 
     /**

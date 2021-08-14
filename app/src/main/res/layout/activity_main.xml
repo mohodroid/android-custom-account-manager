@@ -9,30 +9,32 @@
     tools:context=".MainActivity">
 
     <TextView
-        android:textColor="@color/black"
-        tools:text="com.mohdroid.authentication.debug"
         android:id="@+id/tvPackageName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/black"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:gravity="center"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        tools:text="com.mohdroid.authentication.debug" />
 
     <Button
         android:id="@+id/invalidateAuthToken"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="invalidateAuthToken"
+        android:textAllCaps="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvPackageName"/>
+        app:layout_constraintTop_toBottomOf="@id/tvPackageName" />
 
     <Button
         android:id="@+id/getAuthTokenByFeature"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="getAuthTokeBbyFeature"
+        android:text="getAuthTokenByFeatures"
+        android:textAllCaps="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/invalidateAuthToken" />
@@ -41,54 +43,60 @@
         android:id="@+id/getAuthToken"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="getAuthToke"
+        android:text="getAuthToken"
+        android:textAllCaps="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/getAuthTokenByFeature" />
 
 
     <Button
-        android:id="@+id/addAccount"
+        android:id="@+id/getAuthTokenWithCallback"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="addAccount"
+        android:text="getAuthTokenWithCallback"
+        android:textAllCaps="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/getAuthToken" />
 
     <Button
+        android:id="@+id/addAccount"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="addAccount"
+        android:textAllCaps="false"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/getAuthTokenWithCallback" />
+
+    <Button
         android:id="@+id/getOtherBuildTypeToken"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="getOtherBuildTypeToken"
+        android:text="getAuthTokenFromOtherAccount"
+        android:textAllCaps="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/addAccount" />
 
     <Button
-        android:id="@+id/invalidateOtherBuildTypeToken"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="invalidateOtherBuildTypeToken"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/getOtherBuildTypeToken" />
-
-    <Button
         android:id="@+id/getOthersAccounts"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="getOthersAccounts"
+        android:text="getAllAccounts"
+        android:textAllCaps="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/invalidateOtherBuildTypeToken" />
+        app:layout_constraintTop_toBottomOf="@id/getOtherBuildTypeToken" />
 
 
     <Button
         android:id="@+id/setVisibleAccount"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="setAccountVisible"
+        android:text="setAccountVisibility"
+        android:textAllCaps="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/getOthersAccounts" />
